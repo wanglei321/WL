@@ -1,0 +1,59 @@
+SELECT
+	* 
+FROM
+	(
+	SELECT
+		NVL( U.RF_CD, A.RF_CD ) RF_CD,
+		NVL( U.DESCR_SHORT, 'Indefinido' ) DESCR,
+		NVL( A.DESCR_SHORT, 'INDEFINIDO' ) TAXREGION_DESCR,
+		NVL( A.NEW_PER_TYPE_DESC, 'Indefinido' ) PER_TYPE_VAL,
+		NVL( A.PROVINCE_DESCR, 'INDEFINIDO' ) PROVINCE_DESCR,
+		NVL( A.Activo, 0 ) ACTIVo,
+		NVL( A.Falecido, 0 ) Falecido,
+		NVL( A.Hernça, 0 ) Hernça,
+		NVL( A.Suspenso, 0 ) Suspenso,
+		NVL( A.Anulado, 0 ) Anulado,
+		NVL( A.Cessado, 0 ) Cessado 
+	FROM
+		ods_mgrp_pub.MV_ODSD_TAXOFFICE U
+		FULL JOIN (
+		SELECT
+			N.RF_CD,
+			O.TAXREGION_CD,
+			O.DESCR_SHORT,
+			A.NEW_PER_TYPE_DESC,
+			OP.DESCR_SHORT PROVINCE_DESCR,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Activo', 1, 0 )) Activo,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Falecido', 1, 0 )) Falecido,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Hernça', 1, 0 )) Hernça,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Suspenso', 1, 0 )) Suspenso,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Anulado', 1, 0 )) Anulado,
+			SUM(
+			DECODE( NEW_STATUS_CD, 'Cessado', 1, 0 )) Cessado 
+		FROM
+			ods_mgrp_pub.ODS_REG_PER A
+			LEFT JOIN ODSD_PROVINCE OP ON TRIM( A.PROVINCE_CD ) = TRIM( OP.PROVINCE_CD )
+			LEFT JOIN MV_ODSD_TAXOFFICE N ON trim( A.rf_cd ) = trim( N.rf_Cd )
+			LEFT JOIN ods_mgrp_pub.ODSD_TAXREGION O ON N.TAXREGION_CD = O.TAXREGION_CD 
+		WHERE
+	 REG_DT < LAST_DAY(
+			TO_DATE( '2021' || '11' || '01', 'YYYYMMDD', 'nls_date_language=PORTUGUESE' )) + 1 
+			AND A.VALID_SW = 'Y' 
+		GROUP BY
+			N.RF_CD,
+			O.TAXREGION_CD,
+			O.DESCR_SHORT,
+			A.NEW_PER_TYPE_DESC,
+			N.DESCR_SHORT,
+			OP.DESCR_SHORT 
+		) A ON A.RF_CD = U.RF_CD 
+	) 
+WHERE
+	Activo > 0 
+ORDER BY
+	RF_CD
